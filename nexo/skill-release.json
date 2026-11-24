@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "skillId": "nexo",
+  "channel": "stable",
+  "version": "1.0.0",
+  "source": {
+    "repository": "https://github.com/maichado/nexo_dev"
+  },
+  "updateManifestUrl": "https://maichado.github.io/nexo_dev/skill-updates/nexo/stable.json"
+}

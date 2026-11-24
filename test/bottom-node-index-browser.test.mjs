@@ -1,0 +1,233 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { ChromeVisualBrowser, findChrome } from '../nexo/bin/visual-check.mjs';
+import { createViewerClick } from './helpers/viewer-click.mjs';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const skillRoot = path.join(root, 'nexo');
+const chromeConfigured = Object.prototype.hasOwnProperty.call(process.env, 'NEXO_CHROME');
+const chrome = chromeConfigured ? findChrome() : null;
+if (chromeConfigured && !chrome) throw new Error(`NEXO_CHROME does not resolve to an executable browser: ${process.env.NEXO_CHROME}`);
+
+test('Bottom node index preserves readable rows and native Viewer interaction', {
+  skip: chrome ? false : 'Set NEXO_CHROME to run the real-browser bottom-index check.',
+}, async (t) => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'nexo-bottom-index-'));
+  t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
+  const evidence = process.env.NEXO_BOTTOM_INDEX_EVIDENCE;
+  if (evidence) fs.mkdirSync(evidence, { recursive: true });
+  const artifact = path.join(scratch, 'architecture.html');
+  execFileSync(process.execPath, [path.join(skillRoot, 'renderers/architecture/render-architecture.mjs'),
+    path.join(skillRoot, 'examples/web-app.architecture.json'), artifact]);
+  const browser = new ChromeVisualBrowser(chrome);
+  t.after(() => browser.close());
+  const session = await browser.sessionPromise;
+  const send = (method, params = {}) => browser.cdp.send(method, params, session);
+  await send('Browser.setDownloadBehavior', { behavior: 'deny' });
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1200, deviceScaleFactor: 1, mobile: false });
+  await send('Emulation.setFocusEmulationEnabled', { enabled: true });
+  async function run(expression) {
+    const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+    assert.equal(result.exceptionDetails, undefined, result.exceptionDetails?.exception?.description);
+    return result.result?.value;
+  }
+  const click = await createViewerClick({ send, run, timeout: 10000 });
+  const loaded = browser.cdp.waitFor('Page.loadEventFired', session);
+  await send('Page.navigate', { url: pathToFileURL(artifact).href + '?theme=dark' });
+  await loaded;
+  await run('document.fonts.ready.then(() => Nexo.readerLayout.whenStable())');
+  const initialRail = await run('document.documentElement.getAttribute("data-reader-rail")');
+  assert.ok(['true', 'bottom'].includes(initialRail));
+
+  // Persisted viewer preferences may already select the bottom rail. First
+  // return to the ordinary side rail, then exercise the shipped toggle path.
+  if (initialRail === 'bottom') {
+    await click('#rail-placement');
+    await run('Nexo.readerLayout.whenStable()');
+  }
+  assert.equal(await run('document.documentElement.getAttribute("data-reader-rail")'), 'true');
+  await click('#rail-placement');
+  await run('Nexo.readerLayout.whenStable()');
+  const bottom = await run(`(() => {
+    const item = document.querySelector('[data-outline-node]');
+    const name = item.querySelector('strong');
+    const description = item.querySelector('small');
+    return {
+      rail: document.documentElement.getAttribute('data-reader-rail'),
+      fontSize: getComputedStyle(name).fontSize,
+      nameWhiteSpace: getComputedStyle(name).whiteSpace,
+      descriptionWhiteSpace: getComputedStyle(description).whiteSpace,
+      nameOverflowWrap: getComputedStyle(name).overflowWrap,
+      groupDisplay: getComputedStyle(item.closest('.node-outline-group').querySelector(':scope > ul')).display,
+      itemId: item.dataset.outlineNode,
+    };
+  })()`);
+  assert.equal(bottom.rail, 'bottom');
+  assert.equal(bottom.fontSize, '13px');
+  assert.equal(bottom.nameWhiteSpace, 'normal');
+  assert.equal(bottom.descriptionWhiteSpace, 'normal');
+  assert.equal(bottom.nameOverflowWrap, 'anywhere');
+  assert.equal(bottom.groupDisplay, 'grid');
+  async function assertStackedItemLayout() {
+    const items = await run(`(() => [...document.querySelectorAll('[data-outline-node]')].map(item => {
+      const firstLine = element => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return [...range.getClientRects()];
+      };
+      const lines = firstLine(item.querySelector('strong'));
+      const name = lines[0];
+      const nameLastLine = lines.at(-1);
+      const dot = item.querySelector('.node-outline-dot').getBoundingClientRect();
+      const small = item.querySelector('small');
+      const description = small && firstLine(small)[0];
+      return {
+        id: item.dataset.outlineNode,
+        nameLines: lines.length,
+        swatchCenter: dot.top + dot.height / 2,
+        firstLineCenter: name.top + name.height / 2,
+        hasDescription: !!small,
+        descriptionTop: description?.top,
+        descriptionLeft: description?.left,
+        nameBottom: nameLastLine.bottom,
+        nameLeft: name.left,
+      };
+    }))()`);
+    for (const item of items) {
+      assert.ok(Math.abs(item.swatchCenter - item.firstLineCenter) <= 3, `${item.id}: swatch is not aligned with the name's first line`);
+      if (item.hasDescription) {
+        assert.ok(item.descriptionTop >= item.nameBottom - 1, `${item.id}: description is not below the name`);
+        assert.ok(Math.abs(item.descriptionLeft - item.nameLeft) <= 1, `${item.id}: description is not left-aligned with the name`);
+      }
+    }
+    return items;
+  }
+  await assertStackedItemLayout();
+  if (evidence) {
+    const capture = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+    fs.writeFileSync(path.join(evidence, 'sample-web-app-1440-dark-integrated.png'), Buffer.from(capture.data, 'base64'));
+  }
+
+  async function key(key, code, windowsVirtualKeyCode) {
+    const text = key === 'Enter' ? '\r' : undefined;
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, text, unmodifiedText: text,
+      windowsVirtualKeyCode, nativeVirtualKeyCode: windowsVirtualKeyCode });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode });
+  }
+  // The placement control stays before the index in tab order. This makes Tab
+  // exercise the browser's native focus navigation rather than a DOM shortcut.
+  await run('document.getElementById("rail-placement").focus()');
+  await key('Tab', 'Tab', 9);
+  assert.equal(await run('document.activeElement.hasAttribute("data-outline-node")'), true);
+  const selectedId = await run('document.activeElement.dataset.outlineNode');
+  await run(`document.activeElement.addEventListener('click', event => {
+    document.documentElement.setAttribute('data-bottom-index-enter-trusted', String(event.isTrusted));
+  }, { once: true })`);
+  await key('Enter', 'Enter', 13);
+  await run(`new Promise((resolve, reject) => {
+    const start = performance.now();
+    (function waitForSelection() {
+      if (Nexo.focus.active() === ${JSON.stringify(selectedId)}) return resolve();
+      if (performance.now() - start > 10000) return reject(new Error('outline selection did not settle'));
+      requestAnimationFrame(waitForSelection);
+    })();
+  })`);
+  assert.equal(await run('document.documentElement.getAttribute("data-bottom-index-enter-trusted")'), 'true');
+  assert.equal(await run('Nexo.focus.active()'), selectedId);
+  assert.equal(await run(`document.querySelector('[data-outline-node=${JSON.stringify(selectedId)}]').getAttribute('aria-current')`), 'true');
+
+  const target = '[data-outline-node="api"]';
+  await run('Nexo.focus.clear()');
+  await run(`document.querySelector(${JSON.stringify(target)}).scrollIntoView({ block: 'center', behavior: 'instant' })`);
+  await run('Nexo.readerLayout.whenStable()');
+  await run(`document.querySelector(${JSON.stringify(target)}).addEventListener('pointerenter', event => {
+    document.documentElement.setAttribute('data-bottom-index-hover-trusted', String(event.isTrusted));
+  }, { once: true })`);
+  const point = await run(`(() => { const item = document.querySelector(${JSON.stringify(target)}); const r = item.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, visible: item.checkVisibility() && r.top >= 0 && r.bottom <= innerHeight }; })()`);
+  assert.equal(point.visible, true);
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+  await run('new Promise(resolve => setTimeout(resolve, 160))');
+  assert.equal(await run('document.documentElement.getAttribute("data-bottom-index-hover-trusted")'), 'true');
+  assert.equal(await run('document.querySelector(".diagram-container > svg").getAttribute("data-intent-trace-active")'), 'api');
+
+  await click('#rail-placement');
+  await run('Nexo.readerLayout.whenStable()');
+  assert.equal(await run('document.documentElement.getAttribute("data-reader-rail")'), 'true');
+  await click('#rail-placement');
+  await run('Nexo.readerLayout.whenStable()');
+  assert.equal(await run('document.documentElement.getAttribute("data-reader-rail")'), 'bottom');
+  assert.equal(await run('document.querySelectorAll("[data-outline-node]").length > 0'), true);
+
+  const wrappedInput = JSON.parse(fs.readFileSync(path.join(skillRoot, 'examples/web-app.architecture.json'), 'utf8'));
+  const baseUsers = wrappedInput.components.find(node => node.id === 'users');
+  const baseWorker = wrappedInput.components.find(node => node.id === 'worker');
+  wrappedInput.boundaries = [];
+  wrappedInput.connections = [];
+  wrappedInput.components = [
+    { ...baseUsers, id: 'host', label: '宿主应用', sublabel: 'Codex / Claude Code / magpie 宿主', pos: [40, 40], size: [220, 80] },
+    { ...baseUsers, id: 'skill', label: 'SuperCodex Skill', sublabel: 'agent 调用说明', pos: [300, 40], size: [220, 80] },
+    { ...baseUsers, id: 'mcp', label: 'MCP stdio 服务', sublabel: 'JSON-RPC · 工具与资源', pos: [560, 40], size: [220, 80] },
+    { ...baseUsers, id: 'ui', label: '自包含 UI 资源', sublabel: '内联脚本与样式', pos: [820, 40], size: [220, 80] },
+    {
+      ...baseUsers,
+      id: 'users',
+      label: 'Cross-region authorization and audit service with durable recovery, compliance controls, and incident coordination',
+      sublabel: 'Tenant-aware decisions with durable audit records and cross-region recovery',
+      pos: [40, 160],
+      size: [1100, 80],
+    },
+    { ...baseWorker, id: 'worker', pos: [1200, 160] },
+  ];
+  delete wrappedInput.components.find(node => node.id === 'worker').sublabel;
+  const wrappedPath = path.join(scratch, 'wrapped.json');
+  const wrappedArtifact = path.join(scratch, 'wrapped.html');
+  fs.writeFileSync(wrappedPath, JSON.stringify(wrappedInput));
+  execFileSync(process.execPath, [path.join(skillRoot, 'renderers/architecture/render-architecture.mjs'), wrappedPath, wrappedArtifact]);
+  const wrappedLoaded = browser.cdp.waitFor('Page.loadEventFired', session);
+  await send('Page.navigate', { url: pathToFileURL(wrappedArtifact).href + '?theme=light' });
+  await wrappedLoaded;
+  await run('document.fonts.ready.then(() => Nexo.readerLayout.whenStable())');
+  if (await run('document.documentElement.getAttribute("data-reader-rail")') === 'true') {
+    await click('#rail-placement');
+    await run('Nexo.readerLayout.whenStable()');
+  }
+  assert.equal(await run('document.documentElement.getAttribute("data-reader-rail")'), 'bottom');
+  const gridAlignment = await run(`(() => {
+    const items = [...document.querySelectorAll('.node-outline-group > ul > li')].map(li => {
+      const r = li.getBoundingClientRect();
+      const dot = li.querySelector('.node-outline-dot').getBoundingClientRect();
+      const strong = li.querySelector('strong').getBoundingClientRect();
+      const small = li.querySelector('small')?.getBoundingClientRect();
+      return {
+        id: li.querySelector('[data-outline-node]')?.dataset.outlineNode,
+        left: r.left,
+        top: r.top,
+        dotTop: dot.top,
+        strongTop: strong.top,
+        smallTop: small?.top ?? null,
+      };
+    });
+    const firstRowTop = items[0]?.top;
+    const firstRow = items.filter(item => Math.abs(item.top - firstRowTop) <= 2);
+    const wrappedRows = items.filter(item => item.top - firstRowTop > 2);
+    const misaligned = wrappedRows.filter(item => !firstRow.some(col => Math.abs(item.left - col.left) <= 1));
+    return { firstRow, wrappedRows, misaligned };
+  })()`);
+  assert.ok(gridAlignment.firstRow.length >= 2, `expected multi-column grid: ${JSON.stringify(gridAlignment)}`);
+  assert.ok(gridAlignment.wrappedRows.length >= 1, `expected wrapped second row: ${JSON.stringify(gridAlignment)}`);
+  assert.deepEqual(gridAlignment.misaligned, [], `expected uniform grid column alignment across rows: ${JSON.stringify(gridAlignment)}`);
+  const hostItem = gridAlignment.firstRow.find(item => item.id === 'host');
+  const skillItem = gridAlignment.firstRow.find(item => item.id === 'skill');
+  assert.ok(hostItem && skillItem, `expected host and skill items on first row: ${JSON.stringify(gridAlignment.firstRow)}`);
+  assert.ok(Math.abs(hostItem.dotTop - skillItem.dotTop) <= 1, 'mixed CJK/Latin items should align dot tops');
+  assert.ok(Math.abs(hostItem.smallTop - skillItem.smallTop) <= 1, 'mixed CJK/Latin items should align sublabel tops');
+  const wrappedItems = await assertStackedItemLayout();
+  assert.ok(wrappedItems.find(item => item.id === 'users').nameLines > 1);
+  assert.equal(wrappedItems.find(item => item.id === 'worker').hasDescription, false);
+});

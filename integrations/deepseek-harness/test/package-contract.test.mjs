@@ -1,0 +1,132 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const integrationRoot = path.resolve(here, '..');
+const repoRoot = path.resolve(integrationRoot, '..', '..');
+const manifestPath = path.join(integrationRoot, 'package.json');
+
+const DEPENDENCY_FIELDS = [
+  'dependencies',
+  'devDependencies',
+  'optionalDependencies',
+  'peerDependencies',
+  'bundledDependencies',
+  'bundleDependencies',
+];
+
+
+test('adapter source lives only under integrations/deepseek-harness outside the development workspace', () => {
+  const rootManifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  assert.equal(rootManifest.private, true, 'repository test tooling must not be publishable');
+  assert.equal(Object.hasOwn(rootManifest, 'workspaces'), false, 'adapter must not join a root workspace');
+  assert.equal(Object.hasOwn(rootManifest, 'dsh'), false, 'root tooling must not declare an adapter bundle');
+  for (const field of DEPENDENCY_FIELDS) {
+    for (const [name, specifier] of Object.entries(rootManifest[field] || {})) {
+      assert.doesNotMatch(`${name} ${specifier}`, /deepseek-harness|nexo-dsh|@deepseek-ai\//,
+        'root tooling must not depend on the opt-in adapter or its host');
+    }
+  }
+  for (const script of Object.values(rootManifest.scripts || {})) {
+    assert.doesNotMatch(script, /deepseek-harness|nexo-dsh|\bdsh\b/,
+      'root scripts must not couple ordinary tests to the opt-in adapter');
+  }
+  const rootLock = fs.readFileSync(path.join(repoRoot, 'pnpm-lock.yaml'), 'utf8');
+  assert.doesNotMatch(rootLock, /deepseek-harness|nexo-dsh|@deepseek-ai\//,
+    'the frozen development install must exclude the adapter and its host');
+  assert.equal(fs.existsSync(path.join(repoRoot, 'integrations/deepseek-harness/package.json')), true);
+});
+
+test('publishable manifest is @maichado/nexo-dsh@1.2.0 with a DSH bundle patch and no install surface', () => {
+  const pkg = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(pkg.name, '@maichado/nexo-dsh');
+  assert.equal(pkg.version, '1.2.0');
+  assert.equal(pkg.license, 'MIT');
+  assert.equal(pkg.type, 'module');
+  assert.equal(pkg.main, './lib/index.js');
+  assert.equal(pkg.dsh?.bundle?.patch, './cordis.patch.yml');
+  assert.equal(fs.existsSync(path.join(integrationRoot, pkg.dsh.bundle.patch)), true);
+  assert.equal(pkg.repository?.url, 'git+https://github.com/maichado/nexo_dev.git');
+  assert.equal(pkg.repository?.directory, 'integrations/deepseek-harness');
+  for (const keyword of ['dsh-plugin', 'deepseek-harness', 'agent-skill', 'architecture-diagram']) {
+    assert.ok(pkg.keywords?.includes(keyword), `missing keyword ${keyword}`);
+  }
+  for (const field of DEPENDENCY_FIELDS) {
+    assert.equal(Object.prototype.hasOwnProperty.call(pkg, field), false, field);
+  }
+  assert.equal(Object.keys(pkg.scripts || {}).length, 0, 'adapter manifest must not declare npm scripts');
+  assert.match(pkg.exports?.['./package.json'] || '', /package\.json/);
+});
+
+test('bundle patch inserts one uniquely named filesystem Skill provider resolved from the installed package', () => {
+  const patch = fs.readFileSync(path.join(integrationRoot, 'cordis.patch.yml'), 'utf8');
+  assert.match(patch, /^- insert:/m);
+  assert.match(patch, /id:\s*nexo-skill-filesystem/);
+  assert.match(patch, /name:\s*'@deepseek-ai\/dsh-skill-filesystem'/);
+  assert.match(patch, /providerName:\s*nexo-plugin/);
+  assert.match(patch, /includeDefaultRoots:\s*true/);
+  assert.match(patch, /bundledSkillDir:\s*!!js/);
+  assert.doesNotMatch(patch, /customSkillDirs/);
+  assert.match(
+    patch,
+    /createRequire\(baseUrl\)\.resolve\('@maichado\/nexo-dsh\/package\.json'\)/,
+  );
+  assert.doesNotMatch(patch, /new URL\(\s*['"]skills\//);
+  assert.doesNotMatch(patch, /nexo_render|nexo_deliver|dsh\.client|ui-deliverables/);
+  const insertBlocks = patch.split(/^- insert:/m).slice(1);
+  assert.equal(insertBlocks.length, 1);
+  const insertedIds = [...insertBlocks[0].matchAll(/^\s+- id:\s*(\S+)/gm)].map((match) => match[1]);
+  assert.deepEqual(insertedIds, ['nexo-skill-filesystem']);
+});
+
+test('distribution acceptance reserves stdout for its machine-readable JSON receipt', () => {
+  const source = fs.readFileSync(
+    path.join(integrationRoot, 'scripts', 'distribution-acceptance.mjs'),
+    'utf8',
+  );
+  assert.match(source, /runWithTransientNetworkRetry/);
+  assert.match(source, /run\('pnpm'/);
+  assert.match(source, /--allow-build=@deepseek-ai\/dsh-subprocess-local/);
+  assert.doesNotMatch(source, /--allow-build=\*/);
+  assert.match(source, /stdio:\s*\['ignore',\s*2,\s*2\]/);
+  assert.doesNotMatch(source, /stdio:\s*['"]inherit['"]/);
+  assert.equal([...source.matchAll(/process\.stdout\.write/g)].length, 2);
+});
+
+test('pack and acceptance enforce the pinned-runtime contract before executing it', () => {
+  const releaseSource = fs.readFileSync(
+    path.join(integrationRoot, 'scripts', 'release-source.mjs'),
+    'utf8',
+  );
+  assert.match(releaseSource, /dshVersion must be an exact SemVer version/);
+  assert.match(releaseSource, /manifest\.scripts/);
+  const packSource = fs.readFileSync(
+    path.join(integrationRoot, 'scripts', 'pack.mjs'),
+    'utf8',
+  );
+  assert.match(packSource, /--ignore-scripts/);
+  const acceptance = fs.readFileSync(
+    path.join(integrationRoot, 'scripts', 'distribution-acceptance.mjs'),
+    'utf8',
+  );
+  assert.match(acceptance, /dshManifest\.name !== DSH_PACKAGE_NAME/);
+  assert.match(acceptance, /dshManifest\.version !== release\.dshVersion/);
+  const identityCheck = acceptance.indexOf('dshManifest.name !== DSH_PACKAGE_NAME');
+  const entryExec = acceptance.indexOf('[dshBin, ...args]');
+  assert.ok(identityCheck !== -1 && entryExec !== -1 && identityCheck < entryExec,
+    'installed identity must be verified before the DSH entry runs');
+});
+
+test('distribution receipt separates canonical ZIP bytes from cross-platform content checks', () => {
+  const source = fs.readFileSync(
+    path.join(integrationRoot, 'scripts', 'distribution-acceptance.mjs'),
+    'utf8',
+  );
+  assert.match(source, /canonicalZipBytes/);
+  assert.match(source, /crossPlatformZipCheck:\s*'extracted-content'/);
+  assert.doesNotMatch(source, /zipContainerBytesReproducible/);
+  assert.doesNotMatch(source, /rsync\/zip are not on GitHub Windows runners/);
+});

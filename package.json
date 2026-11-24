@@ -1,0 +1,28 @@
+{
+  "name": "nexo-repository",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "pnpm run test:core",
+    "test:changed": "node scripts/run-affected-tests.mjs --local",
+    "test:focus": "node scripts/run-tests.mjs --require-files",
+    "test:compat": "pnpm run test:core",
+    "test:browser": "node scripts/run-browser-tests.mjs",
+    "test:webm": "node test/webm-artifact.smoke.mjs && node --test test/site-language-integration.mjs",
+    "test:core": "node scripts/run-tests.mjs test/core-smoke.test.mjs",
+    "test:generated": "pnpm --dir nexo run check:viewer && pnpm --dir nexo run check:brand-marks && pnpm --dir nexo run check:validators && pnpm --dir nexo run check:release-identity && node test/golden.mjs",
+    "test:full": "pnpm run test:generated && pnpm --dir nexo/modules/code-analysis test && node scripts/run-tests.mjs",
+    "test:affected": "node scripts/run-affected-tests.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "parse5": "7.3.0",
+    "saxes": "6.0.0",
+    "skills": "1.7.0",
+    "yaml": "2.9.1"
+  },
+  "packageManager": "pnpm@12.21.0"
+}

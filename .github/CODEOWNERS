@@ -1,0 +1,5 @@
+# Keep repository governance and automation changes under the owner's review.
+/.github/CODEOWNERS @maichado
+/.github/workflows/** @maichado
+/.github/actions/** @maichado
+/SECURITY.md @maichado

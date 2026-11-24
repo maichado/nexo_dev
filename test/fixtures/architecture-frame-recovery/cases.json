@@ -1,0 +1,186 @@
+{
+  "review2/bounds-330x175": {
+    "file": "review2-bounds-330x175.json",
+    "passes": false,
+    "diagnostic": "schema/minimum"
+  },
+  "review2/bounds-330x200": {
+    "file": "review2-bounds-330x200.json",
+    "passes": false,
+    "diagnostic": "schema/minimum"
+  },
+  "review2/bounds-330x210": {
+    "file": "review2-bounds-330x210.json",
+    "passes": false,
+    "diagnostic": "schema/minimum"
+  },
+  "review2/bounds-330x220": {
+    "file": "review2-bounds-330x220.json",
+    "passes": false,
+    "diagnostic": "schema/minimum"
+  },
+  "review2/bounds-330x230": {
+    "file": "review2-bounds-330x230.json",
+    "passes": false,
+    "diagnostic": "schema/minimum"
+  },
+  "review2/bounds-330x240": {
+    "file": "review2-bounds-330x240.json",
+    "passes": false,
+    "diagnostic": "layout/component-out-of-bounds"
+  },
+  "review2/bounds-330x250": {
+    "file": "review2-bounds-330x250.json",
+    "passes": true,
+    "round5Svg": "513018cce02c664ea94a53fafecdb4cff6374140af111a75412a0c6045b8e548"
+  },
+  "review2/bounds-385x170": {
+    "file": "review2-bounds-385x170.json",
+    "passes": false,
+    "diagnostic": "schema/minimum"
+  },
+  "review2/frame-feasible": {
+    "file": "review2-frame-feasible.json",
+    "passes": true,
+    "round5Svg": "513018cce02c664ea94a53fafecdb4cff6374140af111a75412a0c6045b8e548"
+  },
+  "review2/frame-full-auto": {
+    "file": "../architecture-route-regressions/frame-full-auto.json",
+    "passes": true,
+    "round5Svg": "513018cce02c664ea94a53fafecdb4cff6374140af111a75412a0c6045b8e548"
+  },
+  "review2/frame-label-anchor": {
+    "file": "review2-frame-label-anchor.json",
+    "passes": true,
+    "round5Svg": "e237d9d49342850a356e388ee0fed279ef323f6a2ad90e21283bb5ca5883c6fa"
+  },
+  "review2/frame-pinned": {
+    "file": "review2-frame-pinned.json",
+    "passes": true,
+    "round5Svg": "505830866a7d656034bc9a54f0ee648592583c48425e2f60051ec3f7cb447f3b"
+  },
+  "review2/missing-frame": {
+    "file": "../architecture-route-regressions/missing-frame.json",
+    "passes": false,
+    "diagnostic": "architecture/non-finite-component-geometry"
+  },
+  "review2/missing-frame-repaired": {
+    "file": "review2-missing-frame-repaired.json",
+    "passes": true
+  },
+  "review3/review3-tight-fixed-frame": {
+    "file": "../architecture-route-regressions/tight-fixed-frame.json",
+    "passes": true,
+    "round5Svg": "ff9a9b022e4548ec536ffbb769ed211e7291e37ba0630b083acb367376487143"
+  },
+  "review3/review3-tight-fixed-frame-control": {
+    "file": "review3-tight-fixed-frame-control.json",
+    "passes": true,
+    "round5Svg": "d58ad3abd504e0bb84c431ceb4bab5303ff42e05b35dd3084a63b25cc2ee601b"
+  },
+  "review3/review3-two-frame-outsiders": {
+    "file": "../architecture-route-regressions/two-frame-outsiders.json",
+    "passes": true
+  },
+  "review3/review3-two-frame-outsiders-control": {
+    "file": "review3-two-frame-outsiders-control.json",
+    "passes": true
+  },
+  "review5/fixed-canvas-false-membership": {
+    "file": "../architecture-route-regressions/fixed-canvas-false-membership.json",
+    "passes": true
+  },
+  "review5/fixed-canvas-overflow": {
+    "file": "../architecture-route-regressions/fixed-canvas-overflow.json",
+    "passes": true
+  },
+  "review5/fixed-canvas-pinned-outsider": {
+    "file": "../architecture-route-regressions/fixed-canvas-pinned-outsider.json",
+    "passes": true
+  },
+  "review6/fixed-canvas-label-regression": {
+    "file": "review6-fixed-canvas-label-regression.json",
+    "passes": true,
+    "round5Svg": "9e4c91570cfb234eb324b7e64ae063f215f8bf62bb6b8f6f7f560b4773dcc526"
+  },
+  "review6/fixed-canvas-overflow-regression": {
+    "file": "review6-fixed-canvas-overflow-regression.json",
+    "passes": true,
+    "round5Svg": "260c40130d110f1b331251a67a9fddf58fd0c1d1a32c37df737f05781edfd603"
+  },
+  "fixture/bounded-frame": {
+    "file": "../architecture-route-regressions/bounded-frame.json",
+    "passes": true,
+    "round5Svg": "7120b3dea810b9f9cf533df9ce5314a956a8ef576da9a86de6f731e66a3c3ada"
+  },
+  "fixture/overlapping-frames": {
+    "file": "../architecture-route-regressions/overlapping-frames.json",
+    "passes": true
+  },
+  "fixture/shared-frame-attachment": {
+    "file": "../architecture-route-regressions/shared-frame-attachment.json",
+    "passes": true
+  },
+  "fixture/tight-fixed-frame": {
+    "file": "../architecture-route-regressions/tight-fixed-frame.json",
+    "passes": true,
+    "round5Svg": "ff9a9b022e4548ec536ffbb769ed211e7291e37ba0630b083acb367376487143"
+  },
+  "fixture/two-frame-outsiders": {
+    "file": "../architecture-route-regressions/two-frame-outsiders.json",
+    "passes": true
+  },
+  "fixture/frame-full-auto": {
+    "file": "../architecture-route-regressions/frame-full-auto.json",
+    "passes": true,
+    "round5Svg": "513018cce02c664ea94a53fafecdb4cff6374140af111a75412a0c6045b8e548"
+  },
+  "fixture/layers-with-dashed-branch": {
+    "file": "../architecture-route-regressions/layers-with-dashed-branch.json",
+    "passes": true
+  },
+  "review7/A-fixed-canvas-reciprocal-detour": {
+    "file": "review7-fixed-canvas-reciprocal-detour.json",
+    "passes": true
+  },
+  "review7/A-fixed-canvas-new-arrowhead-mask": {
+    "file": "review7-fixed-canvas-new-arrowhead-mask.json",
+    "passes": true
+  },
+  "review8/frame-recovery": {
+    "file": "review8-frame-recovery.json",
+    "passes": true,
+    "round11Svg": "175b4b5d618b0730da9f54d2a2728ff0492ed59641579358f15d871e3ab3d23b"
+  },
+  "review8/frame-recovery-second": {
+    "file": "review8-frame-recovery-second.json",
+    "passes": true,
+    "straightConnections": [["n0", "n1"]]
+  },
+  "review8/load-inventory-detour": {
+    "file": "review8-load-inventory-detour.json",
+    "passes": true,
+    "routeLengthLimits": {
+      "Load inventory": 100
+    }
+  },
+  "review8/reciprocal-detour": {
+    "file": "review8-reciprocal-detour.json",
+    "passes": true,
+    "routeLengthLimits": {
+      "API request": 125,
+      "Fetch preferences": 125
+    }
+  },
+  "fixture/pinned-canvas-label-clearance": {
+    "file": "pinned-canvas-label-clearance.json",
+    "passes": true,
+    "round8Svg": "7b3e78d45e68227325e3958716228bd5e934a86380f2b24192143e2d41e2928e"
+  },
+  "review9/fixed-096": {
+    "file": "review9-fixed-096.json",
+    "passes": true,
+    "straightConnections": [["n3", "n4"]],
+    "cleanArtifact": true
+  }
+}

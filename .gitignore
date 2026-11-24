@@ -1,0 +1,14 @@
+.DS_Store
+.harnessed/
+node_modules/
+.wrangler/
+.claude/
+.lore/
+/.impeccable/
+
+# Local analysis outputs and validator test scratch directories
+/nexo/out/
+/out/
+/nexo/.validator-check-*/
+__pycache__/
+*.py[cod]

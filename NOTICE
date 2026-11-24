@@ -1,0 +1,23 @@
+Nexo
+Copyright (c) 2026 Michael Machado
+
+Nexo is distributed under the Apache License, Version 2.0 (LICENSE),
+except where a file, package manifest, or third-party notice specifies otherwise.
+The separately versioned DeepSeek Harness adapter remains MIT.
+
+Attribution required by the upstream licenses:
+Nexo is a modified derivative of Archify (https://github.com/tt-a1i/archify),
+Copyright (c) 2026 tt-a1i, which originated from
+Cocoon-AI/architecture-diagram-generator, Copyright (c) 2025 Cocoon AI.
+Those portions remain available under their original Apache-2.0 and MIT
+terms; the historical MIT copyright and permission notice is preserved in
+LICENSE-MIT. Michael Machado modified these files in 2026, including the
+renaming and rebranding of the project as Nexo.
+
+Third-party components retain their own licenses; see THIRD_PARTY_NOTICES.md
+and the license files beside those components. Names and logos do not imply
+official endorsement, and the software license grants no general trademark
+permission.
+
+These software licenses cover Nexo's embedded runtime and templates, not
+ownership of a user's authored content, business data, or source repository.

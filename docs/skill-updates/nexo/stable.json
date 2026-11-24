@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "skillId": "nexo",
+  "channel": "stable",
+  "version": "1.0.0",
+  "publishedAt": "2026-11-24T00:00:00Z",
+  "source": {
+    "repository": "https://github.com/maichado/nexo_dev",
+    "ref": "v1.0.0",
+    "treeSha": "0000000000000000000000000000000000000000"
+  },
+  "artifact": {
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "summary": "First Nexo release.",
+  "releaseNotes": "https://github.com/maichado/nexo_dev/releases/tag/v1.0.0",
+  "severity": "normal"
+}

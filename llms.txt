@@ -1,0 +1,51 @@
+# Nexo
+
+> Turn any idea, everyday plan, concept, workflow, Mermaid draft, or codebase into a polished interactive HTML diagram (ten diagram types: architecture, workflow, sequence, dataflow, lifecycle, ERD, class, tree, timeline, waterfall) or a 4-style one-page explainer, plus built-in Architecture Diagnosis for codebases and 1080p Story video export — zero diagram syntax, layout-checked, offline HTML. Free and open source (Apache-2.0).
+
+Version: 1.0.0
+Repository: https://github.com/maichado/nexo_dev
+Website: https://nexo.dev
+
+## Install for the user
+
+If you are an agent asked to install Nexo, do only the steps below. Tell the user what each command will run, then wait for them to confirm the scope before you install. Do not generate a diagram, scan a repository, or update anything else as part of installation.
+
+Confirm this scope first:
+
+- Global (`--global`) or the current project only.
+- Target agent: the agent you are running in, unless the user names others. Switcher ids: `cursor`, `codex`, `claude-code`, `opencode`, `github-copilot`.
+
+1. Discover the skill. This only lists the package; it does not install it.
+
+   `npx -y skills@latest add https://nexo.dev --list --full-depth`
+
+   Stop unless the listing contains exactly one skill named `nexo`.
+
+2. Before either install command, inspect every selected agent destination. If an existing `nexo` destination contains unmanaged files, stop and report the conflict before running the installer; preserve those files.
+
+   Install that skill for the confirmed agent. `--copy` copies files instead of symlinking. Leave unmanaged files in place. If the installer reports a conflict with existing unmanaged files, stop and tell the user; do not delete them. `--yes` only skips prompts for the scope they already confirmed.
+
+   One agent:
+
+   `npx -y skills@latest add https://nexo.dev --skill nexo --agent <agent> --global --copy --yes`
+
+   Several agents, by repeating `--agent`:
+
+   `npx -y skills@latest add https://nexo.dev --skill nexo --agent cursor --agent codex --agent claude-code --agent opencode --agent github-copilot --global --copy --yes`
+
+   Omit `--global` for a project-only install. Do not add other skills, agents, sources, or force flags.
+
+3. Verify with the installed package. `<installed-path>` is the directory the installer reported (a global copy is often under a `skills/nexo` directory the agent already scans; a project copy is often `.agents/skills/nexo`).
+
+   `node <installed-path>/bin/nexo.mjs doctor`
+
+   Report each selected target and its verification result. Say Nexo is ready only for targets whose installation and doctor check succeeded; report skipped or failed targets separately. They can ask for any of the ten diagram types, or a one-page explainer.
+
+If you were only asked to install Nexo, stop here and do not fetch the reference links below.
+
+## Documentation and verified examples
+
+- [Full reference](https://nexo.dev/llms-full.txt): Complete product facts, universal life & engineering scope, 10 diagram types, 4-style explainers, and FAQ.
+- [Comparison & guides](https://nexo.dev/compare) · [Scenario guide](https://nexo.dev/guide) · [Proof gallery](https://nexo.dev/gallery) · [Agent guide](https://nexo.dev/agent-diagrams)
+- [Life & community](https://nexo.dev/cases/explainer/first-rental) · [Leave workflow](https://nexo.dev/cases/life/leave-plan.workflow) · [Shanghai CityWalk](https://nexo.dev/cases/community/shanghai-citywalk)
+- [Technical cases](https://nexo.dev/cases/explainer/p99-tail-latency) · [MCO runtime case](https://nexo.dev/cases/mco-runtime)
